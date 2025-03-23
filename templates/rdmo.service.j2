@@ -1,0 +1,36 @@
+[Unit]
+Description=RDMO {{ rdmo_service }} gunicorn daemon
+After=network.target
+
+[Service]
+User={{ rdmo_user }}
+Group={{ rdmo_group }}
+
+WorkingDirectory={{ rdmo_home }}/rdmo-app
+
+LogsDirectory=gunicorn/{{ rdmo_service }} django/{{ rdmo_service }}
+RuntimeDirectory=gunicorn/{{ rdmo_service }}
+
+Environment=GUNICORN_BIN=env/bin/gunicorn
+Environment=GUNICORN_WORKER=3
+Environment=GUNICORN_TIMEOUT=30
+Environment=GUNICORN_BIND=unix:/run/gunicorn/{{ rdmo_service }}/rdmo.sock
+Environment=GUNICORN_PID_FILE=/run/gunicorn/{{ rdmo_service }}/rdmo.pid
+Environment=GUNICORN_ACCESS_LOG_FILE=/var/log/gunicorn/{{ rdmo_service }}/access.log
+Environment=GUNICORN_ERROR_LOG_FILE=/var/log/gunicorn/{{ rdmo_service }}/error.log
+
+ExecStart=/bin/sh -c '${GUNICORN_BIN} \
+  --workers ${GUNICORN_WORKER} \
+  --timeout ${GUNICORN_TIMEOUT} \
+  --bind ${GUNICORN_BIND} \
+  --pid ${GUNICORN_PID_FILE} \
+  --access-logfile ${GUNICORN_ACCESS_LOG_FILE} \
+  --error-logfile ${GUNICORN_ERROR_LOG_FILE} \
+  config.wsgi:application'
+
+ExecReload=/bin/sh -c '/usr/bin/pkill -HUP -F ${GUNICORN_PID_FILE}'
+
+ExecStop=/bin/sh -c '/usr/bin/pkill -TERM -F ${GUNICORN_PID_FILE}'
+
+[Install]
+WantedBy=multi-user.target
